@@ -1,1 +1,0 @@
-DROP TABLE IF EXISTS users;   echo CREATE TABLE users (   echo   id INTEGER PRIMARY KEY AUTOINCREMENT,   echo   email TEXT NOT NULL UNIQUE,   echo   password_hash TEXT NOT NULL,   echo   api_calls_remaining INTEGER DEFAULT 10,   echo   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP   echo );
