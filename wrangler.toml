@@ -1,0 +1,10 @@
+    # backend/wrangler.toml
+    name = "mytoolapi" # 你的 worker 名字，需全局唯一
+    main = "src/index.ts"
+    compatibility_date = "2023-10-30"
+
+    # 【重要】本地开发时绑定 D1 数据库
+    [[d1_databases]]
+    binding = "DB"              # 在代码中用 DB 这个变量名访问数据库
+    database_name = "mytooldb" # 本地开发用的数据库名
+    database_id = "******************************" # 本地数据库ID, 后面步骤会生成
