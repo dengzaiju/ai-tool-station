@@ -3,7 +3,7 @@ import { Layout, Input, Button, Card, List, Typography, message, Badge } from 'a
 import { SendOutlined, UserOutlined, RobotOutlined } from '@ant-design/icons';
 import axios from 'axios';
 
-const { Content, Sider } = Layout;
+const { Content } = Layout;
 const { TextArea } = Input;
 const { Title, Text } = Typography;
 
