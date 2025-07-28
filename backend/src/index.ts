@@ -33,12 +33,14 @@ const app = new Hono<{ Bindings: Bindings }>();
 
 // 5. 中间件配置
 app.use('/api/*', cors({
-    origin: 'http://localhost:5173',
+    origin: [
+        'http://localhost:5173',  // 本地开发
+        'https://ai-tool-station-frontend.pages.dev'  // 生产环境
+    ],
     allowMethods: ['POST', 'GET', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
 }));
-
 // 6. 认证中间件
 const authMiddleware = async (c, next) => {
     const token = getCookie(c, 'auth_token');
