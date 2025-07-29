@@ -1,0 +1,8 @@
+name = "admin-system"
+main = "src/index.ts"
+compatibility_date = "2023-10-30"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "my-tool-db"
+database_id = "266f1d85-4930-4272-8599-dbb2baf52725" 
