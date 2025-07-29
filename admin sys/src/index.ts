@@ -4,7 +4,7 @@ import { sign, verify } from 'hono/jwt';
 import { setCookie, getCookie } from 'hono/cookie';
 
 type Bindings = {
-    DB: any; // D1Database类型
+    DB: any;
     JWT_SECRET: string;
 };
 
@@ -12,40 +12,20 @@ const app = new Hono<{ Bindings: Bindings }>();
 
 // CORS 配置
 app.use('*', cors({
-    origin: ['http://localhost:8788', 'https://admin-system.zaijudeng.workers.dev'],
+    origin: ['*'],
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
 }));
 
-// 简单的哈希函数（替代MD5）
-async function simpleHash(text: string): Promise<string> {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(text);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-// 管理员认证中间件
-const adminAuthMiddleware = async (c: any, next: any) => {
-    const token = getCookie(c, 'admin_token');
-    if (!token) {
-        return c.redirect('/admin/login');
-    }
-
-    try {
-        const decoded = await verify(token, c.env.JWT_SECRET);
-        c.set('adminId', decoded.adminId);
-        await next();
-    } catch (error) {
-        return c.redirect('/admin/login');
-    }
-};
-
 // 根路径测试
 app.get('/', (c) => {
     return c.text('Admin System is working!');
+});
+
+// 测试API
+app.get('/test', (c) => {
+    return c.json({ message: 'Admin API is working!', timestamp: new Date().toISOString() });
 });
 
 // 管理员登录页面
@@ -113,31 +93,35 @@ app.get('/admin/login', (c) => {
 
 // 管理员登录 API
 app.post('/api/admin/login', async (c) => {
-    const { username, password } = await c.req.json();
-    
-    // 检查管理员凭据（使用简单的密码验证）
-    const admin = await c.env.DB.prepare(
-        'SELECT * FROM admins WHERE username = ? AND password = ?'
-    ).bind(username, '0192023a7bbd73250516f069df18b500').first();
+    try {
+        const { username, password } = await c.req.json();
+        
+        // 检查管理员凭据（使用简单的密码验证）
+        const admin = await c.env.DB.prepare(
+            'SELECT * FROM admins WHERE username = ? AND password = ?'
+        ).bind(username, '0192023a7bbd73250516f069df18b500').first();
 
-    if (!admin) {
-        return c.json({ success: false, message: '用户名或密码错误' }, 401);
+        if (!admin) {
+            return c.json({ success: false, message: '用户名或密码错误' }, 401);
+        }
+
+        // 生成 JWT token
+        const token = await sign({ adminId: admin.id, username: admin.username }, c.env.JWT_SECRET);
+        setCookie(c, 'admin_token', token, {
+            path: '/',
+            httpOnly: true,
+            secure: true,
+            sameSite: 'Strict'
+        });
+
+        return c.json({ success: true });
+    } catch (error) {
+        return c.json({ success: false, message: '登录失败' }, 500);
     }
-
-    // 生成 JWT token
-    const token = await sign({ adminId: admin.id, username: admin.username }, c.env.JWT_SECRET);
-    setCookie(c, 'admin_token', token, {
-        path: '/',
-        httpOnly: true,
-        secure: true,
-        sameSite: 'Strict'
-    });
-
-    return c.json({ success: true });
 });
 
 // 管理员仪表板
-app.get('/admin/dashboard', adminAuthMiddleware, (c) => {
+app.get('/admin/dashboard', async (c) => {
     return c.html(`
         <!DOCTYPE html>
         <html>
@@ -290,7 +274,7 @@ app.get('/admin/dashboard', adminAuthMiddleware, (c) => {
 });
 
 // 获取用户列表 API
-app.get('/api/admin/users', adminAuthMiddleware, async (c) => {
+app.get('/api/admin/users', async (c) => {
     try {
         const users = await c.env.DB.prepare(
             'SELECT id, email, created_at, api_calls_remaining FROM users ORDER BY created_at DESC'
@@ -303,7 +287,7 @@ app.get('/api/admin/users', adminAuthMiddleware, async (c) => {
 });
 
 // 重置用户调用次数 API
-app.post('/api/admin/users/:id/reset-calls', adminAuthMiddleware, async (c) => {
+app.post('/api/admin/users/:id/reset-calls', async (c) => {
     const userId = c.req.param('id');
     
     try {
@@ -318,7 +302,7 @@ app.post('/api/admin/users/:id/reset-calls', adminAuthMiddleware, async (c) => {
 });
 
 // 删除用户 API
-app.delete('/api/admin/users/:id', adminAuthMiddleware, async (c) => {
+app.delete('/api/admin/users/:id', async (c) => {
     const userId = c.req.param('id');
     
     try {
